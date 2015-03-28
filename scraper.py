@@ -113,6 +113,7 @@ def retrieve_items(list_url):
 
 		count_offset += 20
 
+# put one best seller url in the url.txt file for scraping.
 with open("url.txt", "r") as f:
 	url = f.read()
 
