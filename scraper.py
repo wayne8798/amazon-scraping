@@ -1,6 +1,7 @@
 import bs4
 import urllib
 import sys
+import os
 import time
 from contextlib import closing
 from selenium.webdriver import Firefox
@@ -18,7 +19,7 @@ def retrieve_url(url):
 		time.sleep(1)
 	return data
 
-def retrieve_reviews(review_url, page_count, fout, count_offset):
+def retrieve_reviews(review_url, page_count, directory, count_offset):
 	data = retrieve_url(review_url)
 	review_soup = bs4.BeautifulSoup(data)
 	reviews = review_soup.find_all("span",
@@ -29,19 +30,23 @@ def retrieve_reviews(review_url, page_count, fout, count_offset):
 	count = 1
 	for r in reviews:
 		star_count = stars[count - 1].get_text()
+		fout = open(directory + "/" + str(count + count_offset) + ".txt" ,"w")
 		fout.write("Review #" + str(count + count_offset) + "\n")
 		fout.write(star_count + " stars\n")
 		fout.write(r.get_text().encode("ascii", "ignore") + "\n\n")
+		fout.close()
 		count += 1
 
 	if page_count > 1:
-		page_link = review_soup.find_all("li", class_="a-selected page-button")[0].a["href"][:-1]
+		page_link = review_soup.find_all("li", class_="a-selected page-button")[0].a["href"]
 		for i in range(2, page_count + 1):
-			retrieve_reviews("http://www.amazon.com" + page_link + str(i), 0, fout, (i-1) * 10)
+			retrieve_reviews("http://www.amazon.com" + page_link + "?pageNumber=" + str(i), 0, directory, (i-1) * 10)
 
 def retrieve_item_info(item_url, index):
 	print index
-	fout = open(str(index) + ".txt", "w")
+	if not os.path.exists(str(index)):
+		os.makedirs(str(index))
+	fout = open(str(index) + "/info.txt", "w")
 
 	item_data = retrieve_url(item_url)
 	item_soup = bs4.BeautifulSoup(item_data)
@@ -49,7 +54,7 @@ def retrieve_item_info(item_url, index):
 	image = item_soup.find(id="imgTagWrapperId")
 	if not (image is None):
 		image_link = image.img["src"]
-		urllib.urlretrieve(image_link, str(index) + ".jpg")
+		urllib.urlretrieve(image_link, str(index) + "/icon.jpg")
 
 	with open("item.html", "w") as f:
 		f.write(item_data)
@@ -89,7 +94,7 @@ def retrieve_item_info(item_url, index):
 			if link_text[:7] == "See all":
 				review_count = int(link_text.split()[2].replace(",", ""))
 				fout.write(str(review_count) + " reviews in total.\n\n")
-				retrieve_reviews(review_url, (review_count - 1)/10 + 1, fout, 0)
+				retrieve_reviews(review_url, (review_count - 1)/10 + 1, str(index), 0)
 
 	fout.close()
 				
